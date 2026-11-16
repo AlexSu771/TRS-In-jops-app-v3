@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TRS Suspension</title>
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TRS">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+/* Concepto: libro de entradas de un taller. Formulario de ficha y listado cronológico por meses con buscador. Todo se guarda en este teléfono. */
+:root {
+  color-scheme: dark;
+  --bg: #000000;
+  --surface: #16110D;
+  --surface-2: #1F1813;
+  --fg: #F5EDE6;
+  --muted: #A99B90;
+  --line: #34291F;
+  --accent: #FB923C;
+  --accent-fg: #1F0E03;
+  --accent-soft: #3A2210;
+  --danger: #F2877F;
+  --display: "Barlow Condensed", "Roboto Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.45 var(--body);
+  padding-top: max(18px, env(safe-area-inset-top, 0px));
+  padding-bottom: max(56px, calc(env(safe-area-inset-bottom, 0px) + 40px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.shell { max-width: 1180px; margin: 0 auto; }
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; margin-bottom: 18px; }
+h1 { margin: 0; font: 700 2.1rem/1 var(--display); letter-spacing: 0.03em; text-transform: uppercase; }
+.count { display: block; margin-top: 6px; color: var(--muted); font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn {
+  min-height: 44px; padding: 0 18px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--surface); color: var(--fg); font: 600 15px/1 var(--body); cursor: pointer;
+}
+.btn:hover { border-color: var(--accent); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn.danger { color: var(--danger); border-color: var(--danger); background: transparent; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.layout { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 960px) {
+  .layout.with-form { grid-template-columns: 390px minmax(0, 1fr); align-items: start; }
+}
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px; }
+.panel h2 { margin: 0 0 14px; font: 700 1.35rem/1.1 var(--display); letter-spacing: 0.03em; text-transform: uppercase; }
+
+.refbox {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 16px; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px;
+}
+.refbox small { color: var(--muted); font-size: 0.8rem; }
+.refbox strong { font: 700 1.6rem/1 var(--display); letter-spacing: 0.04em; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+.grid { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
+.grid > div { min-width: 0; }
+.full { grid-column: 1 / -1; }
+@media (max-width: 480px) { .grid { grid-template-columns: 1fr; } }
+.lab { display: block; margin-bottom: 5px; color: var(--muted); font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+input[type="text"], input[type="tel"], input[type="email"], input[type="date"], input[type="search"], textarea {
+  width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--surface); color: var(--fg); font: inherit;
+}
+textarea { min-height: 104px; resize: vertical; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.8; }
+fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.jobs { display: grid; gap: 8px; grid-template-columns: 1fr 1fr; }
+.chk {
+  display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 44px; padding: 8px 10px;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--surface); cursor: pointer;
+}
+.chk input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); flex: none; }
+.chk:has(input:checked) { background: var(--accent-soft); border-color: var(--accent); }
+.form-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+
+.search-wrap { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 6px; }
+.search-wrap input { flex: 1 1 220px; min-width: 0; min-height: 50px; font-size: 1.05rem; padding-inline: 14px; }
+.search-wrap select {
+  flex: 0 1 170px; min-height: 50px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--surface); color: var(--fg); font: inherit;
+}
+.opt-hint { display: block; margin-top: 5px; color: var(--muted); font-size: 0.82rem; }
+.hint { margin: 0 0 8px; color: var(--muted); font-size: 0.85rem; }
+.note { margin: 12px 0; padding: 14px 16px; border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); background: var(--surface); }
+.note.warn { border-style: solid; border-color: var(--danger); color: var(--fg); }
+
+.month { display: flex; align-items: baseline; justify-content: space-between; margin: 22px 0 8px; padding-bottom: 6px; border-bottom: 2px solid var(--line); }
+.month h3 { margin: 0; font: 700 1.15rem/1 var(--display); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.month span { color: var(--muted); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+
+.card {
+  display: grid; gap: 8px 20px; align-items: start; margin-bottom: 8px; padding: 14px 16px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  grid-template-columns: 108px minmax(0, 1.1fr) minmax(0, 1fr) auto;
+}
+.card.editing { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.c-ref { font: 700 1.4rem/1 var(--display); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+.c-date { display: block; margin-top: 4px; color: var(--muted); font: 500 0.85rem/1 var(--body); letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.c-name { font-weight: 600; overflow-wrap: anywhere; }
+.c-tel { color: var(--muted); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.c-bike { font-weight: 500; overflow-wrap: anywhere; }
+.c-plate { color: var(--muted); font-size: 0.9rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.chip { padding: 2px 8px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 600; }
+.c-note { grid-column: 2 / 4; color: var(--muted); font-size: 0.92rem; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.c-act { grid-column: 4; grid-row: 1; }
+.c-act .btn { min-height: 38px; padding: 0 14px; }
+@media (max-width: 759px) {
+  .card { grid-template-columns: minmax(0, 1fr) auto; }
+  .c-ref { grid-column: 1; }
+  .c-act { grid-column: 2; grid-row: 1; }
+  .c-client, .c-bike, .c-note { grid-column: 1 / -1; }
+}
+
+.data-panel { margin-top: 28px; }
+.data-panel .row { display: flex; flex-wrap: wrap; gap: 10px; }
+
+#toast {
+  position: fixed; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; pointer-events: none;
+  padding: 0 16px calc(16px + env(safe-area-inset-bottom, 0px));
+}
+#toast div { max-width: 520px; padding: 12px 16px; border-radius: 6px; background: var(--fg); color: var(--bg); font-weight: 500; box-shadow: 0 6px 24px rgba(0,0,0,0.25); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="top">
+    <div>
+      <h1>TRS Suspension</h1>
+      <span class="count" id="count">0 entradas</span>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn primary" id="btnNew">Nueva entrada</button>
+      <button type="button" class="btn" id="btnExport">Exportar a Excel</button>
+    </div>
+  </header>
+
+  <main class="layout" id="layout">
+    <section class="panel" id="formPanel" aria-labelledby="formTitle" hidden>
+      <h2 id="formTitle">Nueva entrada</h2>
+      <form id="entryForm" autocomplete="off">
+        <div class="refbox">
+          <div><span class="lab" style="margin:0">Referencia</span><small id="refHelp">Se asigna al guardar</small></div>
+          <strong id="refValue">OT-0001</strong>
+        </div>
+        <div class="grid">
+          <div class="full" id="refManualWrap">
+            <label class="lab" for="f-ref">Referencia propia (opcional)</label>
+            <input type="text" id="f-ref" maxlength="20" placeholder="Automática">
+            <span class="opt-hint">Déjala vacía para asignar la siguiente. Escríbela solo si añades una orden de años anteriores con su número original, y cambia la fecha de ingreso.</span>
+          </div>
+          <div class="full">
+            <label class="lab" for="f-fecha">Fecha de ingreso</label>
+            <input type="date" id="f-fecha" required>
+          </div>
+          <div class="full">
+            <label class="lab" for="f-nombre">Cliente</label>
+            <input type="text" id="f-nombre" required placeholder="Nombre y apellidos">
+          </div>
+          <div>
+            <label class="lab" for="f-tel">Teléfono</label>
+            <input type="tel" id="f-tel" required placeholder="600 000 000">
+          </div>
+          <div>
+            <label class="lab" for="f-email">Email</label>
+            <input type="email" id="f-email" placeholder="opcional">
+          </div>
+          <div>
+            <label class="lab" for="f-marca">Marca</label>
+            <input type="text" id="f-marca" required placeholder="Yamaha">
+          </div>
+          <div>
+            <label class="lab" for="f-modelo">Modelo</label>
+            <input type="text" id="f-modelo" required placeholder="MT-07">
+          </div>
+          <div class="full">
+            <label class="lab" for="f-matricula">Matrícula</label>
+            <input type="text" id="f-matricula" placeholder="opcional">
+          </div>
+          <fieldset class="full">
+            <legend class="lab">Trabajos</legend>
+            <div class="jobs" id="jobs"></div>
+          </fieldset>
+          <div class="full">
+            <label class="lab" for="f-coment">Comentarios</label>
+            <textarea id="f-coment" placeholder="Avería, estado de la moto, piezas pedidas…"></textarea>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn primary" id="btnSave">Guardar entrada</button>
+          <button type="button" class="btn" id="btnCancel">Cancelar</button>
+          <button type="button" class="btn danger" id="btnDel" hidden>Eliminar entrada</button>
+        </div>
+      </form>
+    </section>
+
+    <section aria-label="Entradas registradas" style="min-width:0">
+      <div class="search-wrap">
+        <label class="sr" for="q">Buscar</label>
+        <input type="search" id="q" placeholder="Buscar por marca, modelo, cliente o teléfono">
+        <label class="sr" for="yearSel">Año</label>
+        <select id="yearSel" hidden></select>
+      </div>
+      <p class="hint">Con varias palabras (por ejemplo «honda 612»), deben coincidir todas.</p>
+      <div class="note warn" id="status" hidden></div>
+      <div id="list"></div>
+
+      <div class="panel data-panel">
+        <h2>Datos de este teléfono</h2>
+        <div class="row">
+          <button type="button" class="btn" id="btnBackup">Guardar copia de seguridad</button>
+          <button type="button" class="btn" id="btnRestore">Restaurar copia</button>
+          <input type="file" id="fileRestore" accept=".json,application/json" class="sr" tabindex="-1">
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="xlsx-mini.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  // Los nueve trabajos con check, en este orden. Cambia aquí los nombres si hace falta.
+  var TRABAJOS = [
+    { id: "mb-horquillas", label: "Mb Horquillas" },
+    { id: "mb-amortiguador", label: "Mb Amortiguador" },
+    { id: "ff-revalvulado", label: "FF Revalvulado" },
+    { id: "rr-revalvulado", label: "RR Revalvulado" },
+    { id: "sd", label: "SD" },
+    { id: "ff-spring", label: "FF Spring" },
+    { id: "rr-spring", label: "RR Spring" },
+    { id: "ff-nuevo", label: "FF Nuevo" },
+    { id: "rr-nuevo", label: "RR Nuevo" }
+  ];
+  var PREFIX = "OT-", KEY = "libroTaller.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function wide() { return window.matchMedia("(min-width: 960px)").matches; }
+  function pad(n) { return String(n).padStart(4, "0"); }
+  function todayISO() {
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function fmt(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+    return m ? m[3] + "/" + m[2] + "/" + m[1] : "";
+  }
+  function norm(s) {
+    return String(s == null ? "" : s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+  }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  /* ---------- Almacenamiento en el teléfono ---------- */
+  var store = loadStore();
+  function loadStore() {
+    try {
+      var d = JSON.parse(localStorage.getItem(KEY) || "null");
+      if (d && Array.isArray(d.records)) return { records: d.records, ultimo: +d.ultimo || 0 };
+    } catch (e) { /* sin datos previos */ }
+    return { records: [], ultimo: 0 };
+  }
+  function persist() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(store));
+      if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+      return true;
+    } catch (e) {
+      toast("No se pudo guardar en el teléfono. Comprueba que el navegador permite guardar datos y que hay espacio.");
+      return false;
+    }
+  }
+
+  var editingId = null, formOpen = wide(), query = "", yearFilter = "";
+  var delArmed = false, delTimer = null, toastTimer = null;
+
+  function toast(msg) {
+    var t = $("toast");
+    t.replaceChildren(el("div", null, msg));
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.replaceChildren(); }, 4200);
+  }
+
+  function sortDesc(a, b) { return (b.fecha || "").localeCompare(a.fecha || "") || (b.num || 0) - (a.num || 0); }
+  function sortAsc(a, b) { return (a.fecha || "").localeCompare(b.fecha || "") || (a.num || 0) - (b.num || 0); }
+
+  function visible() {
+    var toks = norm(query).split(/\s+/).filter(Boolean);
+    var list = store.records.slice().sort(sortDesc);
+    if (yearFilter) list = list.filter(function (r) { return (r.fecha || "").slice(0, 4) === yearFilter; });
+    if (!toks.length) return list;
+    return list.filter(function (r) {
+      var hay = norm([r.ref, r.nombre, r.telefono, r.marca, r.modelo, r.matricula].join(" "));
+      var dig = String(r.telefono || "").replace(/\D/g, "");
+      return toks.every(function (t) {
+        var tt = t.replace(/^\+/, ""), td = tt.replace(/\D/g, "");
+        return hay.indexOf(t) !== -1 || (td.length >= 3 && td === tt && dig.indexOf(td) !== -1);
+      });
+    });
+  }
+
+  function nextNum() {
+    var n = store.ultimo;
+    store.records.forEach(function (r) { if ((r.num || 0) > n) n = r.num; });
+    return n + 1;
+  }
+
+  /* ---------- Formulario ---------- */
+  function buildJobs() {
+    var box = $("jobs");
+    TRABAJOS.forEach(function (t) {
+      var lab = el("label", "chk");
+      var cb = document.createElement("input");
+      cb.type = "checkbox"; cb.id = "job-" + t.id; cb.value = t.id;
+      lab.append(cb, el("span", null, t.label));
+      box.append(lab);
+    });
+  }
+
+  function findIndex(id) {
+    for (var i = 0; i < store.records.length; i++) if (store.records[i].id === id) return i;
+    return -1;
+  }
+
+  function fillForm() {
+    var i = editingId ? findIndex(editingId) : -1;
+    var cur = i >= 0 ? store.records[i] : null;
+    if (!cur) editingId = null;
+    $("formTitle").textContent = cur ? "Editar entrada" : "Nueva entrada";
+    $("refValue").textContent = cur ? cur.ref : PREFIX + pad(nextNum());
+    $("refHelp").textContent = cur ? "Referencia de la entrada" : "Se asigna al guardar";
+    $("f-fecha").value = cur ? (cur.fecha || todayISO()) : todayISO();
+    $("f-nombre").value = cur ? (cur.nombre || "") : "";
+    $("f-tel").value = cur ? (cur.telefono || "") : "";
+    $("f-email").value = cur ? (cur.email || "") : "";
+    $("f-marca").value = cur ? (cur.marca || "") : "";
+    $("f-modelo").value = cur ? (cur.modelo || "") : "";
+    $("f-matricula").value = cur ? (cur.matricula || "") : "";
+    $("f-coment").value = cur ? (cur.comentarios || "") : "";
+    TRABAJOS.forEach(function (t) { $("job-" + t.id).checked = !!(cur && cur.trabajos && cur.trabajos[t.id]); });
+    $("btnDel").hidden = !cur;
+    $("refManualWrap").hidden = !!cur;
+    $("f-ref").value = "";
+    resetDel();
+  }
+
+  function refExists(ref) {
+    var k = norm(ref);
+    return store.records.some(function (r) { return norm(r.ref) === k; });
+  }
+
+  function readForm() {
+    var trabajos = {};
+    TRABAJOS.forEach(function (t) { trabajos[t.id] = $("job-" + t.id).checked; });
+    return {
+      fecha: $("f-fecha").value,
+      nombre: $("f-nombre").value.trim(),
+      telefono: $("f-tel").value.trim(),
+      email: $("f-email").value.trim(),
+      marca: $("f-marca").value.trim(),
+      modelo: $("f-modelo").value.trim(),
+      matricula: $("f-matricula").value.trim(),
+      trabajos: trabajos,
+      comentarios: $("f-coment").value.trim()
+    };
+  }
+
+  function syncLayout() {
+    $("formPanel").hidden = !formOpen;
+    $("layout").classList.toggle("with-form", formOpen);
+  }
+
+  function openForm(id) {
+    editingId = id || null;
+    formOpen = true;
+    fillForm(); syncLayout(); renderList();
+    if (!wide()) $("formPanel").scrollIntoView({ block: "start" });
+    if (!id) $("f-nombre").focus({ preventScroll: true });
+  }
+
+  function leaveForm() {
+    editingId = null;
+    if (!wide()) formOpen = false;
+    fillForm(); syncLayout(); renderList();
+  }
+
+  function resetDel() {
+    delArmed = false;
+    clearTimeout(delTimer);
+    $("btnDel").textContent = "Eliminar entrada";
+  }
+
+  function save(ev) {
+    ev.preventDefault();
+    var d = readForm();
+    if (!d.fecha || !d.nombre || !d.telefono || !d.marca || !d.modelo) {
+      toast("Completa fecha, cliente, teléfono, marca y modelo.");
+      return;
+    }
+    var now = new Date().toISOString();
+    if (editingId) {
+      var i = findIndex(editingId);
+      if (i < 0) { toast("La entrada ya no existe."); leaveForm(); return; }
+      var cur = store.records[i];
+      store.records[i] = Object.assign({ id: cur.id, ref: cur.ref, num: cur.num, creado: cur.creado || now }, d);
+      if (!persist()) return;
+      toast("Cambios guardados en " + cur.ref);
+    } else {
+      var manual = $("f-ref").value.trim();
+      var n = 0, ref;
+      if (manual) {
+        if (refExists(manual)) { toast("Ya existe una entrada con la referencia " + manual + "."); return; }
+        ref = manual;
+      } else {
+        n = nextNum();
+        while (refExists(PREFIX + pad(n))) n++;
+        ref = PREFIX + pad(n);
+        store.ultimo = n;
+      }
+      store.records.push(Object.assign({ id: ref, ref: ref, num: n, creado: now }, d));
+      if (!persist()) return;
+      toast("Entrada " + ref + " guardada");
+    }
+    leaveForm();
+  }
+
+  function remove() {
+    if (!editingId) return;
+    var btn = $("btnDel");
+    if (!delArmed) {
+      delArmed = true;
+      btn.textContent = "Pulsa de nuevo para eliminar";
+      clearTimeout(delTimer);
+      delTimer = setTimeout(resetDel, 4000);
+      return;
+    }
+    resetDel();
+    var i = findIndex(editingId);
+    if (i >= 0) store.records.splice(i, 1);
+    if (!persist()) return;
+    toast("Entrada eliminada");
+    leaveForm();
+  }
+
+  /* ---------- Listado ---------- */
+  function note(text, cls) { return el("div", "note" + (cls ? " " + cls : ""), text); }
+
+  function monthLabel(key, n) {
+    var m = /^(\d{4})-(\d{2})$/.exec(key);
+    var head = el("div", "month");
+    var title = "Sin fecha";
+    if (m) {
+      title = new Date(+m[1], +m[2] - 1, 1).toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+      title = title.charAt(0).toUpperCase() + title.slice(1);
+    }
+    head.append(el("h3", null, title), el("span", null, n + (n === 1 ? " entrada" : " entradas")));
+    return head;
+  }
+
+  function card(r) {
+    var c = el("article", "card" + (r.id === editingId ? " editing" : ""));
+    var ref = el("div", "c-ref", r.ref || r.id);
+    ref.append(el("span", "c-date", fmt(r.fecha)));
+    var cl = el("div", "c-client");
+    cl.append(el("div", "c-name", r.nombre || ""), el("div", "c-tel", r.telefono || ""));
+    var bike = el("div", "c-bike");
+    bike.append(el("div", null, ((r.marca || "") + " " + (r.modelo || "")).trim()));
+    if (r.matricula) bike.append(el("div", "c-plate", r.matricula));
+    var chips = el("div", "chips");
+    TRABAJOS.forEach(function (t) { if (r.trabajos && r.trabajos[t.id]) chips.append(el("span", "chip", t.label)); });
+    if (chips.childNodes.length) bike.append(chips);
+    var act = el("div", "c-act");
+    var b = el("button", "btn", "Editar");
+    b.type = "button";
+    b.setAttribute("aria-label", "Editar " + (r.ref || r.id));
+    b.addEventListener("click", function () { openForm(r.id); });
+    act.append(b);
+    c.append(ref, cl, bike, act);
+    if (r.comentarios) c.append(el("div", "c-note", r.comentarios));
+    return c;
+  }
+
+  function syncYears() {
+    var seen = {};
+    store.records.forEach(function (r) { var y = (r.fecha || "").slice(0, 4); if (/^\d{4}$/.test(y)) seen[y] = true; });
+    var years = Object.keys(seen).sort().reverse();
+    if (yearFilter && !seen[yearFilter]) yearFilter = "";
+    var sel = $("yearSel");
+    sel.hidden = years.length < 2;
+    var opts = [new Option("Todos los años", "")];
+    years.forEach(function (y) { opts.push(new Option(y, y)); });
+    sel.replaceChildren.apply(sel, opts);
+    sel.value = yearFilter;
+  }
+
+  function renderList() {
+    var box = $("list");
+    box.replaceChildren();
+    var total = store.records.length;
+    syncYears();
+    var vis = visible();
+    var filtered = !!(query.trim() || yearFilter);
+
+    $("count").textContent = filtered
+      ? vis.length + " de " + total + " entradas"
+      : total + (total === 1 ? " entrada" : " entradas");
+    $("btnExport").textContent = (filtered ? "Exportar selección" : "Exportar a Excel") + " (" + vis.length + ")";
+    $("btnExport").disabled = !vis.length;
+
+    if (!total) {
+      box.append(note("Aún no hay entradas. Pulsa «Nueva entrada», rellena la ficha y guarda la primera moto."));
+      return;
+    }
+    if (!vis.length) {
+      box.append(note("Ninguna entrada coincide con la búsqueda."));
+      return;
+    }
+    var counts = {};
+    vis.forEach(function (r) { var k = (r.fecha || "").slice(0, 7); counts[k] = (counts[k] || 0) + 1; });
+    var cur = null;
+    vis.forEach(function (r) {
+      var k = (r.fecha || "").slice(0, 7);
+      if (k !== cur) { cur = k; box.append(monthLabel(k, counts[k])); }
+      box.append(card(r));
+    });
+  }
+
+  /* ---------- Entregar archivos (compartir en el móvil, descargar en el PC) ---------- */
+  async function deliver(blob, filename, mime) {
+    var file = new File([blob], filename, { type: mime });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: filename });
+        return true;
+      } catch (e) {
+        if (e && e.name === "AbortError") return false;
+      }
+    }
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+    return true;
+  }
+
+  async function exportXlsx() {
+    var rows = visible().sort(sortAsc);
+    if (!rows.length) { toast("No hay entradas para exportar."); return; }
+    var head = ["Referencia", "Fecha de ingreso", "Cliente", "Teléfono", "Email", "Marca", "Modelo", "Matrícula"]
+      .concat(TRABAJOS.map(function (t) { return t.label; }), ["Comentarios"]);
+    var widths = [11, 15, 26, 15, 26, 14, 16, 12]
+      .concat(TRABAJOS.map(function () { return 14; }), [60]);
+    var data = rows.map(function (r) {
+      var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(r.fecha || "");
+      var serial = m ? Math.round((Date.UTC(+m[1], +m[2] - 1, +m[3]) - Date.UTC(1899, 11, 30)) / 86400000) : null;
+      var cells = [
+        { s: r.ref || r.id },
+        serial != null ? { d: serial } : { s: "" },
+        { s: r.nombre || "" }, { s: String(r.telefono || "") }, { s: r.email || "" },
+        { s: r.marca || "" }, { s: r.modelo || "" }, { s: r.matricula || "" }
+      ];
+      TRABAJOS.forEach(function (t) { cells.push({ s: r.trabajos && r.trabajos[t.id] ? "Sí" : "" }); });
+      cells.push({ s: r.comentarios || "", st: 3 });
+      return cells;
+    });
+    try {
+      var blob = window.MiniXLSX.build(head, data, widths);
+      var ok = await deliver(blob, "taller-motos-" + todayISO() + ".xlsx", window.MiniXLSX.MIME);
+      if (ok) toast("Excel listo (" + rows.length + (rows.length === 1 ? " entrada)." : " entradas)."));
+    } catch (e) {
+      toast("No se pudo generar el Excel.");
+    }
+  }
+
+  /* ---------- Copia de seguridad ---------- */
+  function backup() {
+    var json = JSON.stringify({ app: "libro-taller", version: 1, exportado: new Date().toISOString(), ultimo: store.ultimo, records: store.records }, null, 1);
+    var blob = new Blob([json], { type: "application/json" });
+    deliver(blob, "libro-taller-copia-" + todayISO() + ".json", "application/json").then(function (ok) {
+      if (ok) toast("Copia de seguridad lista.");
+    });
+  }
+
+  function restore(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var d = JSON.parse(String(reader.result));
+        if (!d || !Array.isArray(d.records)) throw new Error("formato");
+        var added = 0;
+        d.records.forEach(function (r) {
+          if (!r || typeof r.ref !== "string" || typeof r.num !== "number") return;
+          r.id = r.id || r.ref;
+          var i = findIndex(r.id);
+          if (i >= 0) store.records[i] = r; else store.records.push(r);
+          added++;
+          if (r.num > store.ultimo) store.ultimo = r.num;
+        });
+        if (+d.ultimo > store.ultimo) store.ultimo = +d.ultimo;
+        if (!persist()) return;
+        editingId = null;
+        fillForm(); renderList();
+        toast("Copia restaurada: " + added + (added === 1 ? " entrada." : " entradas."));
+      } catch (e) {
+        toast("Ese archivo no es una copia de seguridad válida.");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  /* ---------- Arranque ---------- */
+  buildJobs();
+  fillForm(); syncLayout(); renderList();
+
+  $("btnNew").addEventListener("click", function () { openForm(null); });
+  $("btnCancel").addEventListener("click", leaveForm);
+  $("btnDel").addEventListener("click", remove);
+  $("btnExport").addEventListener("click", exportXlsx);
+  $("btnBackup").addEventListener("click", backup);
+  $("btnRestore").addEventListener("click", function () { $("fileRestore").click(); });
+  $("fileRestore").addEventListener("change", function (e) {
+    var f = e.target.files && e.target.files[0];
+    if (f) restore(f);
+    e.target.value = "";
+  });
+  $("entryForm").addEventListener("submit", save);
+  $("q").addEventListener("input", function (e) { query = e.target.value; renderList(); });
+  $("yearSel").addEventListener("change", function (e) { yearFilter = e.target.value; renderList(); });
+
+  if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+  }
+})();
+</script>
+</body>
+</html>
